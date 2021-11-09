@@ -1,13 +1,38 @@
 import React, { VFC, useState, useEffect } from "react";
-import { FormControl, TextField } from "@material-ui/core";
+import { makeStyles } from "@material-ui/styles";
+import { FormControl, List, TextField } from "@material-ui/core";
 import AddToPhotosIcon from "@material-ui/icons/AddToPhotos";
+import ExitToAppIcon from "@material-ui/icons/ExitToApp";
 
-import "./App.css";
+import "./App.module.css";
+import styles from "./TaskItem.module.css";
 import { db } from "./firebase";
+import { auth } from "./firebase";
+import TaskItem from "./TaskItem";
 
-const App: VFC = () => {
+const useStyles = makeStyles({
+  field: {
+    marginTop: 30,
+    marginBottom: 20,
+  },
+  list: {
+    margin: "auto",
+    width: "40%",
+  },
+});
+
+const App: VFC = (props: any) => {
   const [tasks, setTasks] = useState([{ id: "", title: "" }]);
   const [input, setInput] = useState("");
+  const classes = useStyles();
+
+
+  useEffect(() => {
+    const unSub = auth.onAuthStateChanged((user) => {
+      !user && props.history.push("login");
+    });
+    return () => unSub();
+  });
 
   useEffect(() => {
     const unSub = db.collection("tasks").onSnapshot((snapshot) => {
@@ -24,27 +49,46 @@ const App: VFC = () => {
   };
 
   return (
-    <div className="App">
+    <div className={styles.app__root}>
       <h1>Todo App by React/FireBase</h1>
+      <button
+        className={styles.app__logout}
+        onClick={async () => {
+          try {
+            await auth.signOut();
+            props.history.push("/login");
+          } catch (error: any) {
+            alert(error.message);
+          }
+        }}
+      >
+        <ExitToAppIcon />
+      </button>
+
+      <br />
       <FormControl>
         <TextField
+          className={classes.field}
           InputLabelProps={{
             shrink: true,
           }}
-          label="New task?"
+          label="New task ?"
           value={input}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
             setInput(e.target.value)
           }
         />
       </FormControl>
-      <button disabled={!input} onClick={newTask}>
+
+      <button className={styles.app__icon} disabled={!input} onClick={newTask}>
         <AddToPhotosIcon />
       </button>
 
-      {tasks.map((tasks) => (
-        <h3 key={tasks.id}>{tasks.title}</h3>
-      ))}
+      <List className={classes.list}>
+        {tasks.map((task) => (
+          <TaskItem key={task.id} id={task.id} title={task.title} />
+        ))}
+      </List>
     </div>
   );
 };
